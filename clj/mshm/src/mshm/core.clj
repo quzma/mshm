@@ -2,11 +2,13 @@
   (:require 
     [clj-http.client :as client]
     [clojure.data.json :as json]
+    [clojure.data.json :as json]
+    [clojure.math.numeric-tower :as math]
     )
   (:gen-class))
 
-(def app-id-here "nIEVDdnGHY7xgXcD5jdZ")
-(def app-code-here "E6R9euusf00qbWu6Y-FWyg")
+(def app-id-weather "nIEVDdnGHY7xgXcD5jdZ")
+(def app-code-weather "E6R9euusf00qbWu6Y-FWyg")
 (def app-id-datalens "ve73EOpIZy3FLGqO4FnW")
 (def app-code-datalens "LTs_gYLjWJTZHbCPcwo2iQ")
 
@@ -15,8 +17,8 @@
   (get-in 
     (json/read-str (get (client/get "https://weather.cit.api.here.com/weather/1.0/report.json" {:query-params 
       {
-       "app_id" app-id-here 
-       "app_code" app-code-here 
+       "app_id" app-id-weather 
+       "app_code" app-code-weather 
        "product" "observation" 
        "oneobservation" true
        "latitude" lat 
@@ -38,8 +40,13 @@
 
   )
   
-(defn calculate-env-score 
+(defn calculate-env-score
   [current low optima high]
+  (cond
+    (< (math/abs (- optima current)) 1) 1000
+    (and (> current low) (< current optima)) (* (/ (- optima low) (- optima current)) 10)
+    (and (< current high) (> current optima)) (* (/ (- high optima) (- current optima)) 10)
+    :else 0.1)
   )
 
 (defn calculate-new-rankness
@@ -79,7 +86,7 @@
        }]
     (map (fn 
            [mycelium] 
-           [(get mycelium 0) (get mycelium 1) (calculate-new-rankness 
+           [(get mycelium 0) (get mycelium 1) (calculate-new-rankness
               (get mycelium 2) 
               this-fungi 
               (weather-here (get mycelium 0) (get mycelium 1)))]
